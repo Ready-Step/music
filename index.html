@@ -61,6 +61,9 @@
   button.rec { background: var(--rec); }
   button.rec.recording { animation: pulse 1s infinite; }
   button.accent { background: var(--accent); color: #082f49; }
+  button.preset-btn { padding: 6px 10px; font-size: 0.8rem; background: #334155; border: 1px solid #475569; }
+  button.preset-btn:hover { background: #3b82f6; border-color: #60a5fa; }
+  button.preset-btn.active-preset { background: #0284c7; border-color: #38bdf8; color: #fff; }
   button:disabled { opacity: 0.45; cursor: not-allowed; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 
@@ -81,9 +84,11 @@
     margin-bottom: 10px; gap: 8px;
   }
   .section-title { font-size: 1rem; font-weight: 800; color: var(--accent); }
-  .badge {
-    font-size: 0.75rem; background: rgba(56,189,248,0.15); color: var(--accent);
-    padding: 4px 8px; border-radius: 6px; font-weight: 600;
+  .preset-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  }
+  .preset-label {
+    font-size: 0.8rem; font-weight: 700; color: #cbd5e1; margin-right: 2px;
   }
 
   /* Tracks */
@@ -93,7 +98,7 @@
     border-radius: 12px;
     padding: 8px 10px;
     display: grid;
-    grid-template-columns: 245px 1fr;
+    grid-template-columns: 255px 1fr;
     gap: 10px;
     align-items: center;
   }
@@ -119,7 +124,8 @@
   }
   .file-label input { display: none; }
   .mini-slider { display: flex; align-items: center; gap: 4px; color: var(--muted); }
-  .mini-slider input { width: 62px; }
+  .mini-slider input { width: 66px; }
+  .vol-text { min-width: 34px; text-align: right; color: #e2e8f0; font-weight: 600; }
 
   /* 16-step grid */
   .steps {
@@ -182,8 +188,8 @@
   .black-key {
     position: absolute;
     top: 0;
-    width: 5.2%;
-    height: 60%;
+    width: 5.4%;
+    height: 58%;
     background: linear-gradient(to bottom, #334155 0%, #0f172a 100%);
     color: #f8fafc;
     border: 1px solid #000;
@@ -193,8 +199,10 @@
     justify-content: center;
     align-items: flex-end;
     padding-bottom: 8px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
+    text-align: center;
+    line-height: 1.1;
     cursor: pointer;
   }
   .black-key.active {
@@ -211,15 +219,15 @@
 <header>
   <div class="title-area">
     <h1>🥁 사물 소리 비트 & 피아노 스튜디오</h1>
-    <p>8가지 사물 소리 · 자동 무음 제거 · 잡음 필터링</p>
+    <p>7가지 사물 소리 · 트랙별 볼륨 조절 · 자동 무음 제거</p>
   </div>
   <div class="controls">
     <button id="btnPlay" class="primary">▶ 비트 재생</button>
     <button id="btnStop" class="stop">■ 정지</button>
     <div class="bpm-box">
       <span>빠르기</span>
-      <input type="range" id="bpmSlider" min="60" max="160" value="105" />
-      <strong id="bpmVal">105</strong> BPM
+      <input type="range" id="bpmSlider" min="60" max="160" value="108" />
+      <strong id="bpmVal">108</strong> BPM
     </div>
     <button id="btnRec" class="rec">● 연주 녹음</button>
     <button id="btnDownload" class="accent" disabled>⬇ WAV 저장</button>
@@ -229,9 +237,13 @@
 <section class="section">
   <div class="section-header">
     <span class="section-title">STEP 1. 사물 소리 비트 메이커 & 라이브 패드</span>
-    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <span class="badge">✨ 앞뒤 무음 자동 컷 & 잡음 필터 적용</span>
-      <button id="btnClearGrid" style="padding:6px 10px; font-size:0.8rem;">박자 초기화</button>
+    <div class="preset-bar">
+      <span class="preset-label">🎵 샘플 비트:</span>
+      <button class="preset-btn active-preset" data-preset="0">1. 신나는 팝 비트</button>
+      <button class="preset-btn" data-preset="1">2. 쿵짝 행진곡</button>
+      <button class="preset-btn" data-preset="2">3. 힙합 그루브</button>
+      <button class="preset-btn" data-preset="3">4. 아프로 타악 리듬</button>
+      <button id="btnClearGrid" style="padding:6px 10px; font-size:0.8rem; background:#475569;">모두 지우기</button>
     </div>
   </div>
   <div class="tracks" id="tracksContainer"></div>
@@ -255,7 +267,7 @@
   </div>
 </section>
 
-<div class="status-bar" id="statusBar">준비 완료: 패드를 누르거나 박자 칸을 클릭해 비트를 만들어 보세요!</div>
+<div class="status-bar" id="statusBar">준비 완료: 샘플 비트를 재생하거나 트랙별 볼륨을 조절해 나만의 리듬을 만들어 보세요!</div>
 
 <script>
 (() => {
@@ -283,17 +295,97 @@
     { id: 3, name: '발 구르기', color: '#eab308', defaultFile: '발 구르기.m4a' },
     { id: 4, name: '나무 타음', color: '#10b981', defaultFile: '나무 타음.m4a' },
     { id: 5, name: '금속음', color: '#06b6d4', defaultFile: '금속음.m4a' },
-    { id: 6, name: '지글지글', color: '#8b5cf6', defaultFile: '지글지글.m4a' },
-    { id: 7, name: '지글지글(2)', color: '#ec4899', defaultFile: '지글지글(2).m4a' }
+    { id: 6, name: '지글지글(2)', color: '#ec4899', defaultFile: '지글지글(2).m4a' }
+  ];
+
+  const SAMPLE_PRESETS = [
+    {
+      name: '1. 신나는 팝 비트',
+      bpm: 108,
+      patterns: [
+        [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+        [0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+        [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+        [0,0,0,0, 1,0,0,1, 0,0,0,0, 1,0,0,0],
+        [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0],
+        [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,1]
+      ]
+    },
+    {
+      name: '2. 쿵짝 행진곡',
+      bpm: 118,
+      patterns: [
+        [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0],
+        [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+        [1,0,1,0, 1,0,1,1, 1,0,1,0, 1,0,0,0],
+        [1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+        [0,0,1,0, 0,0,1,0, 0,0,1,0, 1,0,1,0]
+      ]
+    },
+    {
+      name: '3. 힙합 그루브',
+      bpm: 92,
+      patterns: [
+        [1,0,0,0, 0,0,0,1, 0,0,1,0, 0,0,0,0],
+        [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0],
+        [1,0,0,1, 0,0,1,0, 0,0,1,0, 0,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,1,0,0, 1,0,0,1],
+        [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+        [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1]
+      ]
+    },
+    {
+      name: '4. 아프로 타악 리듬',
+      bpm: 112,
+      patterns: [
+        [1,0,0,0, 0,0,1,0, 0,0,0,0, 1,0,0,0],
+        [0,0,0,1, 0,0,0,0, 1,0,0,1, 0,0,0,0],
+        [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+        [0,0,1,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+        [1,0,0,1, 0,0,1,0, 0,0,1,0, 1,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0],
+        [1,1,0,1, 0,1,0,1, 1,1,0,1, 0,1,0,1]
+      ]
+    }
   ];
 
   const tracks = TRACK_CONFIG.map(cfg => ({
     ...cfg,
     buffer: null,
     fileName: '불러오는 중...',
-    pitch: 1.0,
+    volume: 1.0,
     steps: Array(16).fill(false)
   }));
+
+  function applyPreset(presetIdx, updateUi = true) {
+    const preset = SAMPLE_PRESETS[presetIdx];
+    if (!preset) return;
+    bpm = preset.bpm;
+    document.getElementById('bpmSlider').value = bpm;
+    document.getElementById('bpmVal').textContent = bpm;
+
+    tracks.forEach((t, idx) => {
+      const rowPat = preset.patterns[idx] || Array(16).fill(0);
+      t.steps = rowPat.map(v => Boolean(v));
+    });
+
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.classList.toggle('active-preset', parseInt(btn.dataset.preset, 10) === presetIdx);
+    });
+
+    if (updateUi) {
+      renderTracks();
+      document.getElementById('statusBar').textContent = `'${preset.name}' 샘플 비트가 적용되었습니다. [▶ 비트 재생]을 눌러보세요!`;
+    }
+    if (isPlaying) {
+      stopSeq();
+      startSeq();
+    }
+  }
 
   function trimAndNormalizeBuffer(audioBuffer, threshold = 0.025) {
     const chData = audioBuffer.getChannelData(0);
@@ -364,9 +456,9 @@
     }
     renderTracks();
     if (loadedCount > 0) {
-      document.getElementById('statusBar').textContent = `${loadedCount}개의 사물 소리 파일이 자동으로 준비되었습니다!`;
+      document.getElementById('statusBar').textContent = `${loadedCount}개의 사물 소리 파일과 샘플 비트가 준비되었습니다! [▶ 비트 재생]을 눌러보세요.`;
     } else {
-      document.getElementById('statusBar').textContent = `각 트랙의 [소리 올리기]로 파일을 선택하거나 GitHub에 .m4a 파일을 함께 올려주세요.`;
+      document.getElementById('statusBar').textContent = `샘플 비트가 세팅되었습니다. GitHub에 7개의 .m4a 파일을 함께 올리거나 [소리 변경]으로 파일을 선택하세요.`;
     }
   }
 
@@ -378,11 +470,10 @@
       padEl.classList.add('hit');
       setTimeout(() => padEl.classList.remove('hit'), 110);
     }
-    if (!t.buffer) return;
+    if (!t.buffer || t.volume <= 0) return;
 
     const src = ctx.createBufferSource();
     src.buffer = t.buffer;
-    src.playbackRate.value = t.pitch;
 
     const hp = ctx.createBiquadFilter();
     hp.type = 'highpass';
@@ -392,9 +483,13 @@
     lp.type = 'lowpass';
     lp.frequency.value = 9500;
 
+    const trackGain = ctx.createGain();
+    trackGain.gain.value = t.volume;
+
     src.connect(hp);
     hp.connect(lp);
-    lp.connect(masterGain);
+    lp.connect(trackGain);
+    trackGain.connect(masterGain);
     src.start();
   }
 
@@ -407,6 +502,7 @@
 
       const info = document.createElement('div');
       info.className = 'track-info';
+      const volPct = Math.round(t.volume * 100);
       info.innerHTML = `
         <div class="track-top">
           <button class="pad-btn" id="pad-${idx}" style="background:${t.color}">두드리기</button>
@@ -420,9 +516,9 @@
             <input type="file" accept="audio/*" data-track="${idx}" />
           </label>
           <div class="mini-slider">
-            <span>음높이</span>
-            <input type="range" min="0.5" max="2.0" step="0.05" value="${t.pitch}" data-pitch="${idx}" />
-            <span>${t.pitch.toFixed(1)}x</span>
+            <span>볼륨</span>
+            <input type="range" min="0" max="1.5" step="0.05" value="${t.volume}" data-vol="${idx}" />
+            <span class="vol-text">${volPct}%</span>
           </div>
         </div>
       `;
@@ -438,6 +534,7 @@
           t.steps[s] = !t.steps[s];
           cell.classList.toggle('active', t.steps[s]);
           cell.style.background = t.steps[s] ? t.color : '';
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active-preset'));
           if (t.steps[s]) playTrack(idx);
         });
         stepsDiv.appendChild(cell);
@@ -462,9 +559,9 @@
         playTrack(idx);
       });
 
-      info.querySelector(`input[data-pitch="${idx}"]`).addEventListener('input', (e) => {
-        t.pitch = parseFloat(e.target.value);
-        e.target.nextElementSibling.textContent = `${t.pitch.toFixed(1)}x`;
+      info.querySelector(`input[data-vol="${idx}"]`).addEventListener('input', (e) => {
+        t.volume = parseFloat(e.target.value);
+        e.target.nextElementSibling.textContent = `${Math.round(t.volume * 100)}%`;
       });
     });
   }
@@ -472,7 +569,7 @@
   let isPlaying = false;
   let currentStep = 0;
   let timerId = null;
-  let bpm = 105;
+  let bpm = 108;
 
   function tick() {
     document.querySelectorAll('.step.playing').forEach(el => el.classList.remove('playing'));
@@ -511,28 +608,36 @@
     }
   });
 
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.preset, 10);
+      applyPreset(idx, true);
+    });
+  });
+
   document.getElementById('btnClearGrid').addEventListener('click', () => {
     tracks.forEach(t => t.steps.fill(false));
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active-preset'));
     renderTracks();
   });
 
   const NOTES = [
     { name: '도', freq: 261.63, black: false },
-    { name: '도#', freq: 277.18, black: true, leftPct: 6.4 },
+    { name: '도#', freq: 277.18, black: true, leftPct: 5.63 },
     { name: '레', freq: 293.66, black: false },
-    { name: '레#', freq: 311.13, black: true, leftPct: 15.5 },
+    { name: '레#', freq: 311.13, black: true, leftPct: 13.97 },
     { name: '미', freq: 329.63, black: false },
     { name: '파', freq: 349.23, black: false },
-    { name: '파#', freq: 369.99, black: true, leftPct: 33.7 },
+    { name: '파#', freq: 369.99, black: true, leftPct: 30.63 },
     { name: '솔', freq: 392.00, black: false },
-    { name: '솔#', freq: 415.30, black: true, leftPct: 42.8 },
+    { name: '솔#', freq: 415.30, black: true, leftPct: 38.97 },
     { name: '라', freq: 440.00, black: false },
-    { name: '라#', freq: 466.16, black: true, leftPct: 51.9 },
+    { name: '라#', freq: 466.16, black: true, leftPct: 47.30 },
     { name: '시', freq: 493.88, black: false },
     { name: '높은 도', freq: 523.25, black: false },
-    { name: '도#', freq: 554.37, black: true, leftPct: 70.1 },
+    { name: '높은 도#', freq: 554.37, black: true, leftPct: 63.97 },
     { name: '높은 레', freq: 587.33, black: false },
-    { name: '레#', freq: 622.25, black: true, leftPct: 79.2 },
+    { name: '높은 레#', freq: 622.25, black: true, leftPct: 72.30 },
     { name: '높은 미', freq: 659.25, black: false },
     { name: '높은 파', freq: 698.46, black: false },
     { name: '높은 솔', freq: 783.99, black: false }
@@ -661,6 +766,7 @@
     return new Blob([out], { type: 'audio/wav' });
   }
 
+  applyPreset(0, false);
   renderTracks();
   tryAutoLoadRepoSounds();
 })();
